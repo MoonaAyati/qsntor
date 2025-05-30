@@ -1,0 +1,42 @@
+[package]
+name = "ntor"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pqc_kyber = {version = "0.7.1"}
+rand_core = {version = "0.6.4", features = ["serde"]}
+rdrand = "0.8.3"
+rustls = "0.20.9"
+openssl = { version = "0.10", features = ["vendored"] }
+rustls-pemfile = "2.0.0"
+rsa = "0.9.6"
+sha1 = "0.10.6"
+pkcs1 = "0.7.5"
+hashes = "0.1.9"
+rand = "0.8.5"
+crypto = "0.5.1"
+x25519-dalek = {version = "2.0.0", features = ["reusable_secrets", "serde"]}
+sha2 = "0.10.8"
+ed25519-dalek = { version = "2.0.1", features = ["rand_core"] }
+pkcs8 = "0.10.2"
+generic-array = "1.1.0"
+hmac = "0.12.1"
+serde = {version = "1.0.217", features = ["derive"]}
+serde_json = "1.0.134"
+hex-literal = "=0.2.2"
+bincode = "1.3.3"
+serde-big-array = "0.5.1"
+csv = "1.3.1"
+
+[env]
+RUST_BACKTRACE = "full"
+
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports", ] }
+
+[[bench]]
+name = "classic_vs_quantum"
+harness = false
