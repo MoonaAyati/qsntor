@@ -1,0 +1,5 @@
+# Ignore Cargo build artifacts
+target/
+
+# Ignore downloaded crate files
+*.crate

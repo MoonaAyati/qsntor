@@ -1,6 +1,12 @@
-use std::mem;
+use std::mem::size_of_val;
+use std::net::{TcpListener, TcpStream, SocketAddr}; // Removed Read, Write if only for csv_writer related things
+// std::io will be removed if OpenOptions and WriterBuilder are its only users here.
+// Assuming Read/Write might be used by TcpStream, so keeping them for now.
+// Let's re-evaluate std::io::Read, Write after seeing if other parts of the file use it.
+// For now, let's focus on OpenOptions, csv::WriterBuilder and the csv_writer function itself.
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream, SocketAddr};
+
+
 use pqc_kyber::*;
 use rsa::{BigUint, RsaPrivateKey, RsaPublicKey, traits::PublicKeyParts};
 use rsa::pkcs1::EncodeRsaPublicKey;
@@ -14,34 +20,12 @@ use std::time::{Duration, Instant};
 use x25519_dalek::ReusableSecret;
 use serde::{Deserialize, Serialize};
 use bincode;
-use serde_big_array::BigArray;
-use std::fs::OpenOptions;
-use std::io;
-use csv::WriterBuilder;
-use std::fmt::Display;
+// Removed: use std::fs::OpenOptions;
+// Removed: use std::io; // This might be too broad, let's see if other io uses exist
+// use std::io; // Keeping this for now, as Read/Write are still there.
+use std::io::{self}; // If io is only for csv_writer, it can be removed.
+// Removed: use csv::WriterBuilder;
 
-fn csv_writer(function_name: &str, duration: Duration) -> io::Result<()> {
-
-    // Open the CSV file in append mode
-    let file = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open("classic.csv")?;
-
-    // Create a CSV writer that does not write headers
-    let mut wtr = WriterBuilder::new()
-        .has_headers(false)
-        .from_writer(file);
-
-    // Write the measurement (e.g., function name and duration in milliseconds)
-    wtr.write_record(&[
-        function_name,
-        format!("{:?}", duration).as_str(),
-    ])?;
-    wtr.flush()?;
-
-    Ok(())
-}
 
 pub struct KeyManager{
     ks_relayid_rsa: Option<RsaPrivateKey>,
@@ -49,9 +33,9 @@ pub struct KeyManager{
     relayid_ed: Option<SigningKey>,
     ks_kyber: Option<SecretKey>,
     kp_kyber: Option<PublicKey>,
-    relayid_digest:Option<[u8;20]>,
-    ks_ntor: Option<ReusableSecret>,
-    kp_ntor: Option<x25519_dalek::PublicKey>,
+    pub relayid_digest:Option<[u8;20]>,
+    pub ks_ntor: Option<ReusableSecret>,
+    pub kp_ntor: Option<x25519_dalek::PublicKey>,
     rng: Option<ThreadRng>
 }
 
@@ -118,7 +102,7 @@ impl KeyManager{
         self.ks_ntor = Some(secret_key);
         self.kp_ntor = Some(public_key);
         let duration = start.elapsed();
-        csv_writer("generate_ntor_keys", duration);
+        // Removed: csv_writer("generate_ntor_keys", duration);
     }
 }
 pub struct ClientSide{
@@ -220,11 +204,11 @@ impl ClientSide {
 
         return if server_auth == client_auth {
             let duration = start.elapsed();
-            csv_writer("ClientSide::client_ckeck", duration);
+            // Removed: csv_writer("ClientSide::client_ckeck", duration);
             (shared_secret_y, shared_secret_b, true)
         } else {
             let duration = start.elapsed();
-            csv_writer("ClientSide::client_ckeck", duration);
+            // Removed: csv_writer("ClientSide::client_ckeck", duration);
             (shared_secret_y, shared_secret_b, false)
         }
     }
@@ -332,7 +316,7 @@ impl ServerSide{
         let server_reply = ServerReply{server_kp, auth};
 
         let duration = start.elapsed();
-        csv_writer("ServerSide::send_to_client", duration);
+        // Removed: csv_writer("ServerSide::send_to_client", duration);
 
         return (server_data, server_reply)
     }
@@ -361,7 +345,7 @@ impl ClientNode{
         stream.write(&encoded).expect("Streaming message to server failed.");
 
         let duration = start.elapsed();
-        csv_writer("ClientNode::sent_to_server", duration);
+        // Removed: csv_writer("ClientNode::sent_to_server", duration);
     }
     fn deserializing(self, mut stream: TcpStream) -> ServerReply {
         let start = Instant::now();
@@ -371,7 +355,7 @@ impl ClientNode{
         let received_data: ServerReply = bincode::deserialize(&buffer).expect("Deserialization failed.");
 
         let duration = start.elapsed();
-        csv_writer("ClientNode::deserializing", duration);
+        // Removed: csv_writer("ClientNode::deserializing", duration);
 
         return received_data;
     }
@@ -385,7 +369,7 @@ impl ClientNode{
                     let server_reply = self.deserializing(stream);
 
                     let duration = start.elapsed();
-                    csv_writer("ClientNode::handle_server", duration);
+                    // Removed: csv_writer("ClientNode::handle_server", duration);
 
                     return Some(server_reply);
                 }
@@ -393,7 +377,7 @@ impl ClientNode{
                     eprintln!("Error accepting connection: {}", e);
 
                     let duration = start.elapsed();
-                    csv_writer("ClientNode::handle_server", duration);
+                    // Removed: csv_writer("ClientNode::handle_server", duration);
 
                     continue;
                 }
@@ -427,7 +411,7 @@ impl ServerNode {
         stream.write(&encoded).expect("Streaming message to server failed.");
 
         let duration = start.elapsed();
-        csv_writer("ServerNode::send_to_client", duration);
+        // Removed: csv_writer("ServerNode::send_to_client", duration);
     }
     fn deserializing(self, mut stream: TcpStream) -> ClientData {
         let start = Instant::now();
@@ -437,7 +421,7 @@ impl ServerNode {
         let received_data: ClientData = bincode::deserialize(&buffer).expect("Deserialization failed.");
 
         let duration = start.elapsed();
-        csv_writer("ServerNode::deserializing", duration);
+        // Removed: csv_writer("ServerNode::deserializing", duration);
 
         return received_data;
     }
@@ -451,7 +435,7 @@ impl ServerNode {
                     let client_data = self.deserializing(stream);
 
                     let duration = start.elapsed();
-                    csv_writer("ServerNode::handle_client", duration);
+                    // Removed: csv_writer("ServerNode::handle_client", duration);
 
                     return Some(client_data);
                 }
@@ -459,7 +443,7 @@ impl ServerNode {
                     eprintln!("Error accepting connection: {}", e);
 
                     let duration = start.elapsed();
-                    csv_writer("ServerNode::handle_client", duration);
+                    // Removed: csv_writer("ServerNode::handle_client", duration);
 
                     continue;
                 }
@@ -545,7 +529,7 @@ impl ClassicNtorTcp {
             if server_result && client_result {
                 //println!("Handshake was successful!")
                 let duration = start.elapsed();
-                csv_writer("NtorTcp::ntor", duration);
+                // Removed: csv_writer("NtorTcp::ntor", duration);
 
                 return (client_reply_size, server_reply_size)
             }
